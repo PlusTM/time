@@ -1,1 +1,186 @@
-index.html
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+	padding: 0;
+	margin: 0;
+	background-color: rgb(34,34,34);
+}
+</style>
+</head>
+<body>
+	<canvas id="canvas" style="z-index: 1;"></canvas>
+	<div style="background-color: rgb(34,34,34); color: rgb(255,255,255); position: absolute; top: 10%; left: 5%; z-index: 3; border: none; font-size: 16px;">hover here to time travel</div>
+  <button onclick="clicked()" style="z-index: 2; position: absolute; top: 10%; left: 90%;"> Reset </button>
+<script type="text/javascript">
+
+var maxParticles = 20000,
+  particleSize = 1,
+  emissionRate = 20,
+  objectSize = 3; // drawSize of emitter/field
+
+var canvas = document.querySelector('canvas');
+var ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+function Particle(point, velocity, acceleration) {
+  this.position = point || new Vector(0, 0);
+  this.velocity = velocity || new Vector(0, 0);
+  this.acceleration = acceleration || new Vector(0, 0);
+}
+
+Particle.prototype.move = function () {
+  this.velocity.add(this.acceleration);
+  this.position.add(this.velocity);
+};
+
+function Vector(x, y) {
+  this.x = x || 0;
+  this.y = y || 0;
+}
+
+Vector.prototype.add = function(vector) {
+  this.x += vector.x;
+  this.y += vector.y;
+}
+
+Vector.prototype.getMagnitude = function () {
+  return Math.sqrt(this.x * this.x + this.y * this.y);
+};
+
+Vector.prototype.getAngle = function () {
+  return Math.atan2(this.y,this.x);
+};
+
+Vector.fromAngle = function (angle, magnitude) {
+  return new Vector(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
+};
+
+function Emitter(point, velocity, spread) {
+  this.position = point; // Vector
+  this.velocity = velocity; // Vector
+  this.spread = spread || Math.PI / 32; // possible angles = 
+}
+
+Emitter.prototype.emitParticle = function() {
+  // Use an angle randomized over the spread so we have more of a "spray"
+  var angle = this.velocity.getAngle() + this.spread - (Math.random() * this.spread * 80);
+
+  // The magnitude of the emitter's velocity
+  var magnitude = this.velocity.getMagnitude();
+
+  // The emitter's position
+  var position = new Vector(this.position.x, this.position.y);
+
+  // New velocity based off of the calculated angle and magnitude
+  var velocity = Vector.fromAngle(angle, magnitude);
+
+  // return our new Particle!
+  return new Particle(position,velocity);
+};
+
+function addNewParticles() {
+  // if we're at our max, stop emitting.
+  if (particles.length > maxParticles) 
+  	return;
+
+  // for each emitter
+  for (var i = 0; i < emitters.length; i++) {
+
+    // emit [emissionRate] particles and store them in our particles array
+    for (var j = 0; j < emissionRate; j++) {
+      particles.push(emitters[i].emitParticle());
+    }
+
+  }
+}
+
+function plotParticles(boundsX, boundsY) {
+  // a new array to hold particles within our bounds
+  var currentParticles = [];
+
+  for (var i = 0; i < particles.length; i++) {
+    var particle = particles[i];
+    var pos = particle.position;
+
+    // If we're out of bounds, drop this particle and move on to the next
+    if (pos.x < 0 || pos.x > boundsX || pos.y < 0 || pos.y > boundsY) continue;
+
+    // Update velocities and accelerations to account for the fields
+    //particle.submitToFields(fields);
+
+    // Move our particles
+    particle.move();
+
+    // Add this particle to the list of current particles
+    currentParticles.push(particle);
+  }
+
+  // Update our global particles reference
+  particles = currentParticles;
+}
+
+function drawParticles() {
+  ctx.fillStyle = 'rgb(255,255,255)';
+  for (var i = 0; i < particles.length; i++) {
+    var position = particles[i].position;
+    ctx.fillRect(position.x, position.y, particleSize, particleSize);
+  }
+}
+
+var particles = []; 
+var mouse = {};
+
+var midX = canvas.width / 2;
+var midY = canvas.height / 2; 
+
+var emitters = [new Emitter(new Vector(midX - 150, midY), Vector.fromAngle(0, 2))];
+
+function loop() {
+  clear();
+  update();
+  draw();
+  queue();
+}
+
+function clear() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function update() {
+  addNewParticles();
+  plotParticles(canvas.width, canvas.height);
+}
+
+function draw() {
+  drawParticles();
+}
+
+function queue() {
+  window.requestAnimationFrame(loop);
+}
+
+loop();
+
+document.onmousemove = function(e) {
+  console.log(e)
+  if (event.pageY < 200 & event.pageX < 200) {
+    queue();
+  }
+  else{
+    // do nothing
+  }
+}
+
+function clicked() {
+  location.reload();
+}
+
+
+</script>	
+
+</body>
+</html>	
